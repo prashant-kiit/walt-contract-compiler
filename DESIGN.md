@@ -166,7 +166,12 @@ The PDF's model format is extended with fields that are **optional or defaulted*
 - `expression` is a column name on `model`. Arbitrary SQL expressions are deliberately excluded: they would
   be dialect-specific and could not be validated.
 - `agg` must be in the aggregation registry.
-- `measure_class` must be consistent with `agg` (e.g. `count_distinct` ↔ `distinct_count`), otherwise it raises `InvalidSemanticModel`.
+- `measure_class` must be consistent with `agg`, otherwise it raises `InvalidSemanticModel`:
+  - `sum` and `count` → `additive`
+  - `count_distinct` → `distinct_count`
+  - `min`, `max`, `avg` → `non_additive`, a value this design adds to the PDF's vocabulary
+- The model never declares the type of a metric's `expression` column, so aggregations do **not** check their
+  argument's type. Checking it would require reading the warehouse.
 - Names are unique across metrics.
 
 ### Dimensions
@@ -190,10 +195,27 @@ The whole model is validated on every call, which costs microseconds at this siz
 
 | Registry | Entries (initial) | Entry defines |
 |---|---|---|
-| Aggregations | `sum`, `count`, `count_distinct`, `min`, `max`, `avg` | SQL function, DISTINCT flag, allowed argument types, whether NULLs are ignored (required for the CASE fallback in §8) |
-| Operators | `=`, `!=`, `<`, `<=`, `>`, `>=`, `in` | arity (scalar/list), allowed types (no `<` on boolean), IR predicate constructor |
-| Types | see above | literal coercion from JSON, canonical rendering form |
+| Aggregations | `sum`, `count`, `count_distinct`, `min`, `max`, `avg` | SQL function, DISTINCT flag, accepted `measure_class`, whether NULLs are ignored (required for the CASE fallback in §8) |
+| Operators | `=`, `!=`, `<`, `<=`, `>`, `>=`, `in` | arity (scalar/list), whether it needs an orderable type (no `<` on boolean) |
+| Types | see above | orderable flag, strict literal coercion from JSON (see below) |
 | Dialects | `duckdb`, `postgres` | spelling + capability flags |
+
+Each registry only *describes* its entries. Operator arity is checked when the contract is parsed (syntactic
+analysis). Whether an operator allows the dimension's type, and literal coercion, are checked during resolve
+(semantic analysis).
+
+**Literal coercion is strict.** A value that doesn't unambiguously mean a value of the type raises `InvalidLiteral`.
+
+| Type | Accepts | Rejects (examples) |
+|---|---|---|
+| `text` | JSON strings | numbers, `null` |
+| `integer` | JSON integers, integral floats (`2026.0`), strings matching `-?\d+` (`"2025"`) | booleans, `2026.5`, `" 2025"` |
+| `double` / `decimal` | JSON numbers, plain decimal strings | booleans, NaN/Infinity, `"1_000"`, surrounding whitespace |
+| `date` | `"YYYY-MM-DD"` that is a real day | `"20260201"`, `"2026-02-30"` |
+| `timestamp` | `"YYYY-MM-DD[T ]HH:MM[:SS[.ffffff]]"` | a date with no time part, time zones |
+| `boolean` | JSON `true`/`false` | `1`, `"true"` |
+
+`null` is rejected for every type. Filtering on NULL (`IS NULL`) is not in the vocabulary.
 
 All aggregations are correct under totals, because grouping sets recompute every aggregate against the base rows (§6.4).
 
