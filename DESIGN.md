@@ -73,7 +73,8 @@ RENDERING                                 ▼
    - It finds the join path for every column that lives on a different dataset than the base. This covers the indirect
      relationships: e.g. `fiscal_year` is reached through `fact_sales.order_date = dim_calendar.date`, and `region`
      through `fact_sales.store_id = dim_store.store_id`.
-   - It records that path on the resolved column reference.
+   - Each resolved column reference carries its dataset. The plan holds the join list once, and every dataset
+     is joined exactly once, so the dataset identifies the column's join path without repeating it.
 
 **Where the dialect line is drawn:** everything above the renderer is dialect-free. A new dialect is a new
 `Dialect` subclass (quoting, literals, type names, aggregate-filter spelling, capability flags) and never
@@ -104,8 +105,8 @@ walt_compiler/
   model.py           # semantic model → Catalog (cross-reference checks)
   contract.py        # contract JSON → typed Contract tree
   joins.py           # join-graph search over declared relationships
-  plan.py            # LogicalPlan IR + PlanBuilder (frozen dataclasses)
-  resolve.py         # orchestrates Contract + Catalog → LogicalPlan
+  plan.py            # LogicalPlan IR (frozen dataclasses only, no logic)
+  resolve.py         # PlanBuilder + orchestration: Contract + Catalog → LogicalPlan
   features/
     metric_filters.py  # per-metric filters → conditional measures
     compare.py         # compare → per-period conditional measures + derived outputs
