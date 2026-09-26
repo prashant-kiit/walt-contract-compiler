@@ -1,0 +1,9 @@
+{
+  "columns": ["region", "order_count", "is_total"],
+  "rows": [
+    ["North", 4, false],
+    ["South", 3, false],
+    ["West",  2, false],
+    [null,    8, true]
+  ]
+}

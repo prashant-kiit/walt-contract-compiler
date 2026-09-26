@@ -1,0 +1,11 @@
+{
+  "metrics": [
+    { "name": "total_revenue", "as": "online_rev",
+      "filters": [ { "field": "channel", "op": "=", "value": "Online", "model": "fact_sales" } ] },
+    { "name": "total_revenue" }
+  ],
+  "group_by": [],
+  "filters": [
+    { "field": "fiscal_year", "op": "=", "value": 2026, "model": "dim_calendar" }
+  ]
+}

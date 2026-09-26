@@ -1,0 +1,11 @@
+{
+  "metrics": [ { "name": "total_revenue" } ],
+  "group_by": [ "region" ],
+  "compare": {
+    "dimension": "fiscal_year",
+    "periods": [ "2025", "2026" ],
+    "primary": "2026",
+    "outputs": [ "values", "delta", "pct_change" ]
+  },
+  "totals": "grand"
+}

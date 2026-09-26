@@ -1,0 +1,24 @@
+{
+  "datasets": [
+    { "name": "fact_sales", "grain": "one order line" },
+    { "name": "dim_store", "grain": "one store" },
+    { "name": "dim_calendar", "grain": "one date" }
+  ],
+  "relationships": [
+    { "from": "fact_sales", "from_column": "store_id", "to": "dim_store",
+      "to_column": "store_id", "cardinality": "many_to_one" },
+    { "from": "fact_sales", "from_column": "order_date", "to": "dim_calendar",
+      "to_column": "date", "cardinality": "many_to_one" }
+  ],
+  "metrics": [
+    { "name": "total_revenue", "agg": "sum", "expression": "revenue",
+      "model": "fact_sales", "measure_class": "additive" },
+    { "name": "order_count", "agg": "count_distinct", "expression": "order_id",
+      "model": "fact_sales", "measure_class": "distinct_count" }
+  ],
+  "dimensions": [
+    { "name": "region", "model": "dim_store", "type": "text" },
+    { "name": "channel", "model": "fact_sales", "type": "text" },
+    { "name": "fiscal_year", "model": "dim_calendar", "type": "integer" }
+  ]
+}

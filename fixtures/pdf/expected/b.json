@@ -1,0 +1,10 @@
+{
+  "columns": ["region", "total_revenue_2025", "total_revenue_2026",
+              "total_revenue_delta", "total_revenue_pct_change", "is_total"],
+  "rows": [
+    ["North", 100.0, 250.0,  150.0, 150.0,             false],
+    ["South", 200.0, 370.0,  170.0,  85.0,             false],
+    ["West",  150.0,  90.0,  -60.0, -40.0,             false],
+    [null,    450.0, 710.0,  260.0,  57.77777777777778, true]
+  ]
+}
