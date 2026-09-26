@@ -21,5 +21,5 @@ def compile_contract(semantic_model: dict, contract: dict, dialect: str,
     options = options or CompileOptions()
     target = get_dialect(dialect, options)
     catalog = build_catalog(semantic_model, options)
-    plan = resolve(parse_contract(contract, options), catalog, options)
+    plan = resolve(parse_contract(contract, options), catalog, options, target.max_identifier_length, target.name)
     return target.render(lower(plan))

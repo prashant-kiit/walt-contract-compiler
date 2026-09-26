@@ -59,10 +59,16 @@ def apply(b, contract: Contract) -> None:
     for m, (_, path) in zip(b.measures, b.measure_outputs):
         per_period = [Measure(f"{m.alias}_{labels[i]}", m.agg, m.arg, _and(m.condition, Compare(col, "=", periods[i])))
                       for i in range(2)]
+        # A name too long only once the period is appended blames the period; if the base name is already
+        # too long on its own, the alias / metric name is the problem. The inner aliases are checked even
+        # when "values" is not an output: they are identifiers in the SQL all the same.
+        period_paths = [f"{spec.path}/periods/{i}" if b.fits(m.alias) else path for i in range(2)]
+        for pm, period_path in zip(per_period, period_paths):
+            b.check_identifier(pm.alias, period_path)
         measures += per_period
         refs = [MeasureRef(pm.alias) for pm in per_period]
         if "values" in spec.outputs:
-            outputs += [(OutputColumn(r.alias, r), path) for r in refs]
+            outputs += [(OutputColumn(r.alias, r), pp) for r, pp in zip(refs, period_paths)]
         if "delta" in spec.outputs:
             outputs.append((OutputColumn(f"{m.alias}_delta", Sub(refs[current], refs[other])), path))
         if "pct_change" in spec.outputs:

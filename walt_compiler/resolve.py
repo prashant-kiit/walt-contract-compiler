@@ -5,8 +5,8 @@ every operator checked against that type, and every dataset the contract touches
 the base through the join planner. Features expand into plain IR building blocks via PlanBuilder.
 """
 from walt_compiler.contract import Contract, FilterSpec, MetricRequest
-from walt_compiler.errors import (DuplicateOutputName, ModelMismatch, MultipleFactTables, UnknownDimension,
-                                  UnknownMetric, UnsupportedOperator)
+from walt_compiler.errors import (DuplicateOutputName, IdentifierTooLong, ModelMismatch, MultipleFactTables,
+                                  UnknownDimension, UnknownMetric, UnsupportedOperator)
 from walt_compiler.features import compare as compare_feature
 from walt_compiler.features import metric_filters
 from walt_compiler.features import totals as totals_feature
@@ -23,9 +23,12 @@ from walt_compiler.types import TYPES, coerce_literal
 class PlanBuilder:
     """Accumulates the pieces of a LogicalPlan while the contract is resolved."""
 
-    def __init__(self, catalog: Catalog, options: CompileOptions):
+    def __init__(self, catalog: Catalog, options: CompileOptions, max_identifier_length: int | None = None,
+                 dialect_name: str = "the target dialect"):
         self.catalog = catalog
         self.options = options
+        self.max_identifier_length = max_identifier_length     # target dialect's limit in UTF-8 bytes; None = none
+        self.dialect_name = dialect_name                       # only for the IdentifierTooLong message
         self.base: str | None = None
         self.needed: dict[str, str] = {}        # dataset -> contract path that first required it
         self.group_by: list[GroupKey] = []
@@ -86,9 +89,21 @@ class PlanBuilder:
 
     # --- assembly -------------------------------------------------------------------------
 
+    def fits(self, name: str) -> bool:
+        limit = self.max_identifier_length
+        return limit is None or len(name.encode("utf-8")) <= limit
+
+    def check_identifier(self, name: str, path: str) -> None:
+        """Every generated identifier (output column or inner measure alias) must fit the dialect's limit."""
+        if not self.fits(name):
+            raise IdentifierTooLong(f"identifier {name!r} is {len(name.encode('utf-8'))} bytes; "
+                                    f"{self.dialect_name} allows at most {self.max_identifier_length} "
+                                    f"and would truncate it.", path=path)
+
     def outputs(self) -> tuple[OutputColumn, ...]:
         seen = set()
         for output, path in self.group_outputs + self.measure_outputs + self.extra_outputs:
+            self.check_identifier(output.name, path)
             if output.name in seen:
                 raise DuplicateOutputName(f"output column {output.name!r} appears more than once; "
                                           f"give one of them a distinct 'as'.", path=path)
@@ -102,8 +117,9 @@ class PlanBuilder:
                            self.conjunction(self.where), self.grouping_sets, outputs, tuple(self.order_by))
 
 
-def resolve(contract: Contract, catalog: Catalog, options: CompileOptions = CompileOptions()) -> LogicalPlan:
-    b = PlanBuilder(catalog, options)
+def resolve(contract: Contract, catalog: Catalog, options: CompileOptions = CompileOptions(),
+            max_identifier_length: int | None = None, dialect_name: str = "the target dialect") -> LogicalPlan:
+    b = PlanBuilder(catalog, options, max_identifier_length, dialect_name)
 
     for request in contract.metrics:
         metric = b.metric(request)

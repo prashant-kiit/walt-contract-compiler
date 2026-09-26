@@ -7,8 +7,8 @@ contract features. Nothing here knows what a contract is.
 from decimal import Decimal
 
 from walt_compiler.errors import UnsupportedFeature
-from walt_compiler.sqlast import (Aggregate, Alias, BinOp, BoolOp, Column, Grouping, GroupingSets, InList, Join,
-                                  Literal, Not, OrderItem, Select, Subquery, Table)
+from walt_compiler.sqlast import (Aggregate, Alias, BinOp, BoolOp, Column, Func, Grouping, GroupingSets, InList,
+                                  Join, Literal, Not, OrderItem, Select, Subquery, Table)
 from walt_compiler.types import TypedLiteral
 
 _PRECEDENCE = {"OR": 1, "AND": 2, "NOT": 3,
@@ -23,6 +23,7 @@ class Dialect:
     name = "standard"
     supports_aggregate_filter = True
     supports_grouping_sets = True
+    max_identifier_length: int | None = None     # in UTF-8 bytes; None = no limit (DESIGN.md §6.5)
 
     # --- leaves ---------------------------------------------------------------------------
 
@@ -113,6 +114,9 @@ class Dialect:
 
     def _render_Grouping(self, node: Grouping) -> str:
         return f"GROUPING({self.render(node.column)})"
+
+    def _render_Func(self, node: Func) -> str:
+        return f"{node.name}({', '.join(self.render(a) for a in node.args)})"
 
     def _render_Alias(self, node: Alias) -> str:
         return f"{self.render(node.expr)} AS {self.quote_ident(node.name)}"

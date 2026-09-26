@@ -9,6 +9,7 @@ from walt_compiler.types import TypedLiteral
 
 INNER_ALIAS = "agg"
 _HUNDRED = s.Literal(TypedLiteral(100.0, "double"))
+_ZERO = s.Literal(TypedLiteral(0, "integer"))
 
 
 def _column(ref: p.ColumnRef) -> s.Column:
@@ -44,7 +45,8 @@ def _output(out: p.OutputColumn) -> s.Expr | s.Alias:
             return s.Alias(s.BinOp("-", ref(left), ref(right)), out.name)
         case p.PctChange(current, base):
             change = s.BinOp("-", ref(current), ref(base))
-            return s.Alias(s.BinOp("/", s.BinOp("*", _HUNDRED, change), ref(base)), out.name)
+            guarded = s.Func("NULLIF", (ref(base), _ZERO))     # a zero base gives NULL (DESIGN.md §6.3)
+            return s.Alias(s.BinOp("/", s.BinOp("*", _HUNDRED, change), guarded), out.name)
         case p.IsTotal():
             return s.Column(None, out.name)
     raise TypeError(f"unknown output {out!r}")

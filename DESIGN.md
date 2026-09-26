@@ -277,12 +277,14 @@ Compare is a general pivot over **any** declared dimension of **any** type.
 - For every metric, whether aliased and/or filtered, the expansion is:
   - one conditional measure per period, whose condition is the metric's own filter AND `dimension = period`
   - an implied contract-level `WHERE dimension IN (p1, p2)`
-  - derived outputs: `{out}_delta = primary − other` and `{out}_pct_change = 100.0 * (primary − other) / other`.
+  - derived outputs: `{out}_delta = primary − other` and `{out}_pct_change = 100.0 * (primary − other) / NULLIF(other, 0)`.
     This is a percentage, not rounded, since rounding is presentation.
 - The column name is `{out}_{period}`, where `{period}` is the period exactly as written in the contract. Identifiers are always
   quoted, so any characters are legal. Name clashes are caught in §6.5.
-- **Division by zero is left to the dialect.** The compiler emits SQL and does not judge the data. Dialect-specific
-  tests pin each behaviour down.
+- **A zero base gives a NULL pct_change, on every dialect.** A percentage change from zero is undefined, so the
+  denominator is `NULLIF(other, 0)`. Left to the engines, the same contract would fail the whole query on Postgres
+  (`division_by_zero`) and return `inf`/`NaN` on DuckDB (not valid JSON). With the §6.3 count rule a zero base is
+  common (a group with no rows in the base period), so this matters. Tests pin NULL on both engines.
 - If a group has no rows for a period, `sum`/`min`/`max`/`avg` give `NULL`, never a coalesced 0. No data is invented.
   `count` and `count_distinct` give 0, because a count over zero rows is genuinely 0 (standard SQL, and the CASE-WHEN
   fallback agrees). So the delta for "2 trips, then none" is −2.
@@ -307,6 +309,9 @@ Compare is a general pivot over **any** declared dimension of **any** type.
   3. `is_total`
 - All output names must be unique, including generated compare names and `is_total`. A clash raises
   `DuplicateOutputName`.
+- Each dialect declares `max_identifier_length` in UTF-8 bytes (Postgres: 63; DuckDB: none). An output name longer
+  than that raises `IdentifierTooLong` at compile time, with the path of the alias, metric or compare period that produced it.
+  Postgres would otherwise truncate silently, and two long names could collide with no `DuplicateOutputName`.
 - `ORDER BY is_total ASC, g1 ASC NULLS LAST, …, gn ASC NULLS LAST` is emitted whenever `group_by` is non-empty.
   - `NULLS LAST` is always spelled out explicitly on group keys, so the order never depends on a database's
     default for where NULLs sort. `is_total` never gets it: it is never NULL (it comes from `GROUPING() = 1`).
@@ -321,7 +326,7 @@ Example: Contract B rendered for DuckDB:
 ```sql
 SELECT "region", "total_revenue_2025", "total_revenue_2026",
        "total_revenue_2026" - "total_revenue_2025" AS "total_revenue_delta",
-       100.0 * ("total_revenue_2026" - "total_revenue_2025") / "total_revenue_2025" AS "total_revenue_pct_change",
+       100.0 * ("total_revenue_2026" - "total_revenue_2025") / NULLIF("total_revenue_2025", 0) AS "total_revenue_pct_change",
        "is_total"
 FROM (
   SELECT "dim_store"."region" AS "region",
@@ -393,10 +398,13 @@ TypedLiteral   = (value, type)
   - `render_literal(TypedLiteral)`: per type; escapes strings, `DATE '…'`, `TIMESTAMP '…'`, `TRUE/FALSE`,
     canonical number form
   - `supports_aggregate_filter`, `supports_grouping_sets`: capability flags
+  - `max_identifier_length`: bytes, or `None` for no limit (§6.5); `compile_contract` hands resolve this number and the dialect's
+    name as plain values, so resolve checks names without knowing anything else about dialects. Every identifier the
+    compiler generates is checked: output columns and inner per-period measure aliases alike.
   - `render_aggregate(...)`
 - Literals are always rendered by the dialect. A contract value is never pasted into SQL text.
 - Honest note: DuckDB and Postgres are close for this vocabulary. The differences live in the fixtures (DDL types) and in
-  runtime behaviour (division by zero) more than in the emitted text. The seam still exists and is tested, and
+  runtime behaviour (identifier length, collation) more than in the emitted text. The seam still exists and is tested, and
   a `FILTER`-less dialect goes through the capability flag, not through the contract layer.
 
 ## 9. Errors (errors.py)
@@ -407,7 +415,7 @@ or model (e.g. `/metrics/0/filters/0/op`).
 `InvalidSemanticModel`, `InvalidContract`, `UnknownDialect`, `UnknownMetric`, `UnknownDimension`,
 `UnsupportedOperator`, `UnsupportedAggregation`, `UnsupportedFeature`, `UnsupportedRelationship`,
 `InvalidLiteral`, `ModelMismatch`, `DuplicateOutputName`, `NoJoinPath`, `AmbiguousJoinPath`,
-`MultipleFactTables`, `InvalidCompare`, `ConflictingFilter`.
+`MultipleFactTables`, `InvalidCompare`, `ConflictingFilter`, `IdentifierTooLong`.
 
 ### "Did you mean" suggestions
 - `UnknownMetric`, `UnknownDimension`, `UnknownDialect`, `UnsupportedOperator`, `UnsupportedAggregation`, and unknown
@@ -432,7 +440,7 @@ Example: `UnknownMetric at /metrics/0/name: 'total_revenu' is not a metric. Did 
 | Join semantics | Orphan fact rows appear with NULL dimension values and in totals; a dimension filter excludes them; `!=` excludes them (§6.1) |
 | Fan-out guard | A query that needs a `one_to_many` relationship raises `UnsupportedRelationship`; `one_to_one` is joined |
 | Totals | Distinct-count and average totals are recomputed, not summed; NULL group vs `is_total` are distinguished |
-| Dialect-specific | Division by zero: Postgres raises an error, DuckDB's native result is pinned |
+| Dialect-specific | A zero pct_change base gives NULL on both engines (raw engine behaviour pinned alongside); `IdentifierTooLong` on Postgres |
 | Golden SQL | Snapshot of exact SQL per contract × dialect, which catches accidental output changes |
 | Determinism | 100 compiles give identical output; also identical across subprocesses with different `PYTHONHASHSEED` |
 | Errors | One test per error code, asserting code and path |

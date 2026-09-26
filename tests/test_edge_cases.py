@@ -1,7 +1,7 @@
 """S10: edge cases DESIGN.md defines, on the synthetic model (§5, §6.1, §6.3-§6.5, §9).
 
 Joined data is tabulated in tests/synthetic_helpers.py; every expectation is computed by hand from it.
-Division by zero is deliberately absent: DESIGN.md pins DuckDB's native result in S11, not here.
+Division by zero (a zero pct_change base -> NULL via NULLIF, DESIGN.md §6.3) is covered in test_dialects.py / test_postgres.py.
 """
 import datetime as dt
 

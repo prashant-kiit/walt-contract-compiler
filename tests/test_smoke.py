@@ -43,7 +43,7 @@ def test_expected_b_matches_reference_sql(pdf_duckdb):
     cols, rows = run(pdf_duckdb, """
         SELECT region, total_revenue_2025, total_revenue_2026,
                total_revenue_2026 - total_revenue_2025 AS total_revenue_delta,
-               100.0 * (total_revenue_2026 - total_revenue_2025) / total_revenue_2025 AS total_revenue_pct_change,
+               100.0 * (total_revenue_2026 - total_revenue_2025) / NULLIF(total_revenue_2025, 0) AS total_revenue_pct_change,
                is_total
         FROM (
           SELECT s.region,

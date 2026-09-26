@@ -3,11 +3,12 @@ from types import MappingProxyType
 
 from walt_compiler.dialects.base import Dialect
 from walt_compiler.dialects.duckdb import DuckDBDialect
+from walt_compiler.dialects.postgres import PostgresDialect
 from walt_compiler.errors import UnknownDialect
 from walt_compiler.options import CompileOptions
 from walt_compiler.suggest import suggest
 
-DIALECTS = MappingProxyType({d.name: d for d in (DuckDBDialect(),)})
+DIALECTS = MappingProxyType({d.name: d for d in (DuckDBDialect(), PostgresDialect())})
 
 
 def get_dialect(name: str, options: CompileOptions = CompileOptions()) -> Dialect:

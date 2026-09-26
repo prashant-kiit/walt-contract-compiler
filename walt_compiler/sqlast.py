@@ -58,7 +58,13 @@ class Grouping:
     column: "Expr"
 
 
-Expr = Column | Literal | BinOp | BoolOp | Not | InList | Aggregate | Grouping
+@dataclass(frozen=True)
+class Func:
+    name: str               # a scalar function every dialect spells the same way, e.g. NULLIF
+    args: tuple["Expr", ...]
+
+
+Expr = Column | Literal | BinOp | BoolOp | Not | InList | Aggregate | Grouping | Func
 
 
 # --- query structure -------------------------------------------------------------------------

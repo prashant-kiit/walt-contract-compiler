@@ -8,7 +8,7 @@ ALL_CODES = [
     "InvalidSemanticModel", "InvalidContract", "UnknownDialect", "UnknownMetric", "UnknownDimension",
     "UnsupportedOperator", "UnsupportedAggregation", "UnsupportedFeature", "UnsupportedRelationship",
     "InvalidLiteral", "ModelMismatch", "DuplicateOutputName", "NoJoinPath", "AmbiguousJoinPath",
-    "MultipleFactTables", "InvalidCompare", "ConflictingFilter",
+    "MultipleFactTables", "InvalidCompare", "ConflictingFilter", "IdentifierTooLong",
 ]
 
 

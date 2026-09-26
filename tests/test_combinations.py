@@ -12,13 +12,12 @@ Trips on the two compare days used throughout (2026-01-07 = T07, T08 is always o
               T06 Harbor  elecF -- !member NULL fare 2    km 1.0
 """
 import copy
-import datetime as dt
 
 import pytest
 
 from walt_compiler.errors import ConflictingFilter, InvalidCompare, InvalidContract, MultipleFactTables
-from tests.synthetic_helpers import (ALL_METRICS, assert_table, compile_synth, execute, fails,  # noqa: F401
-                                     synth_duckdb, synthetic_contract)
+from tests.synthetic_helpers import (ALL_METRICS, CONTRACT_EXPECTED, assert_table, compile_synth,  # noqa: F401
+                                     execute, fails, synth_duckdb, synthetic_contract)
 
 D5, D6 = "2026-01-05", "2026-01-06"
 
@@ -67,21 +66,10 @@ def test_compare_with_a_filter_on_another_dimension_of_the_same_dataset_is_not_a
 # === ✅ compare + totals ======================================================================
 
 def test_compare_with_totals_recomputes_distinct_counts_and_averages(synth_duckdb):
-    # electric F: T01 (05, r101, 3), T04 (06, r103, NULL), T06 (06, rider NULL, 2)
-    # electric T: T02 (05, r102, 5), T03 (05, r101, 4), T05 (06, r102, 6)
-    # unique_riders  F: 1 -> 1 (NULL rider ignored), delta 0, pct 0
-    #                T: {102,101} = 2 -> {102} = 1, delta -1, pct 100 * -1 / 2 = -50
-    #            total: {101,102} = 2 (not 1 + 2 = 3) -> {103,102} = 2, delta 0, pct 0
-    # avg_fare       F: 3 -> 2 / 1 = 2 (NULL fare ignored), delta -1, pct 100 * -1 / 3
-    #                T: (5 + 4) / 2 = 4.5 -> 6, delta 1.5, pct 100 * 1.5 / 4.5
-    #            total: 12 / 3 = 4 (not (3 + 4.5) / 2 = 3.75) -> (2 + 6) / 2 = 4, delta 0, pct 0
-    # T07 (the only NULL-electric trip) is on 2026-01-07, outside both periods.
+    # Hand-computed table (distinct counts and averages recomputed on the total row) lives in
+    # tests/synthetic_helpers.py CONTRACT_EXPECTED, shared with the Postgres suite.
     cols, rows = execute(synth_duckdb, synthetic_contract("riders_by_electric_compare"))
-    assert_table(cols, rows,
-                 ["electric"] + compare_cols("unique_riders") + compare_cols("avg_fare") + ["is_total"],
-                 [[False, 1, 1, 0, 0.0, 3.0, 2.0, -1.0, -100.0 / 3, False],
-                  [True, 2, 1, -1, -50.0, 4.5, 6.0, 1.5, 100.0 * 1.5 / 4.5, False],
-                  [None, 2, 2, 0, 0.0, 4.0, 4.0, 0.0, 0.0, True]])
+    assert_table(cols, rows, *CONTRACT_EXPECTED["riders_by_electric_compare"])
 
 
 # === ✅ compare + multiple metrics / multiple group_by ========================================
@@ -194,23 +182,10 @@ def test_primary_first_in_periods_reverses_the_delta(synth_duckdb):
 # === ✅ totals + any aggregation / multiple group_by ==========================================
 
 def test_totals_with_every_aggregation_and_two_group_by_columns(synth_duckdb):
-    # (maker_country, member), NULLs last in both keys:
-    #   DE F: T08            fare 3   trips 1 paid 1 riders 1          min 3.0 max 3.0 avg 3
-    #   DE T: T03            fare 4   trips 1 paid 1 riders 1          min 4.0 max 4.0 avg 4
-    #   NL F: T02 T05        fare 11  trips 2 paid 2 riders {102} = 1  min 6.0 max 6.0 avg 5.5
-    #   NL T: T01 T04        fare 3   trips 2 paid 1 riders {101,103}=2 min 1.5 max 2.5 avg 3 / 1 = 3
-    #   -- F: T06            fare 2   trips 1 paid 1 riders 0 (only NULL) min 1.0 max 1.0 avg 2
-    #   -- T: T07            fare 7   trips 1 paid 1 riders 1          min 8.0 max 8.0 avg 7
-    #   total: 30, 8, 7, riders {101,102,103} = 3 (the groups sum to 6), 1.0, 8.0, 30 / 7
+    # Hand-computed table ((maker_country, member), NULLs last, total recomputed from base rows) lives in
+    # tests/synthetic_helpers.py CONTRACT_EXPECTED, shared with the Postgres suite.
     cols, rows = execute(synth_duckdb, synthetic_contract("every_aggregation_by_country_member"))
-    assert_table(cols, rows, ["maker_country", "member"] + ALL_METRICS + ["is_total"],
-                 [["DE", False, 3.0, 1, 1, 1, 3.0, 3.0, 3.0, False],
-                  ["DE", True, 4.0, 1, 1, 1, 4.0, 4.0, 4.0, False],
-                  ["NL", False, 11.0, 2, 2, 1, 6.0, 6.0, 5.5, False],
-                  ["NL", True, 3.0, 2, 1, 2, 1.5, 2.5, 3.0, False],
-                  [None, False, 2.0, 1, 1, 0, 1.0, 1.0, 2.0, False],
-                  [None, True, 7.0, 1, 1, 1, 8.0, 8.0, 7.0, False],
-                  [None, None, 30.0, 8, 7, 3, 1.0, 8.0, 30.0 / 7, True]])
+    assert_table(cols, rows, *CONTRACT_EXPECTED["every_aggregation_by_country_member"])
 
 
 def test_totals_min_max_avg_over_a_one_hop_boolean(synth_duckdb):
@@ -244,15 +219,10 @@ def test_totals_with_per_metric_filters(synth_duckdb):
 # === ✅ same metric repeated with different aliases / filters =================================
 
 def test_same_metric_repeated_with_aliases_and_filters(synth_duckdb):
-    # per trip_date:            plain       electric = true     district = Harbor   NL AND member
-    #   05: T01 T02 T03         3+5+4 = 12  T02 5 + T03 4 = 9   T01 3 + T02 5 = 8   T01 3
-    #   06: T04 T05 T06         NULL+6+2=8  T05 6               T06 2               T04 fare NULL -> NULL
-    #   07: T07 T08             7+3 = 10    T08 3 (T07 NULL)    T07 7               none -> NULL
+    # Hand-computed table (plain / electric / Harbor / NL AND member fares per trip_date) lives in
+    # tests/synthetic_helpers.py CONTRACT_EXPECTED, shared with the Postgres suite.
     cols, rows = execute(synth_duckdb, synthetic_contract("fare_variants_by_day"))
-    assert_table(cols, rows, ["trip_date", "fare_total", "electric_fare", "harbor_fare", "nl_member_fare"],
-                 [[dt.date(2026, 1, 5), 12.0, 9.0, 8.0, 3.0],
-                  [dt.date(2026, 1, 6), 8.0, 6.0, 2.0, None],
-                  [dt.date(2026, 1, 7), 10.0, 3.0, 7.0, None]])
+    assert_table(cols, rows, *CONTRACT_EXPECTED["fare_variants_by_day"])
 
 
 def test_contract_filter_and_per_metric_filter_combine_as_and(synth_duckdb):

@@ -1,0 +1,19 @@
+# Postgres 16 for the dialect tests (`make test-pg`, DESIGN.md §10).
+# Host port 55432, not 5432, so it never clashes with a Postgres already running on this machine.
+# Tests connect with WALT_PG_DSN (default in tests/conftest.py) and give each test its own schema.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: walt
+      POSTGRES_PASSWORD: walt
+      POSTGRES_DB: walt
+    ports:
+      - "55432:5432"
+    healthcheck:
+      # TCP, not the unix socket: during first-start init the server only listens on the socket,
+      # so a socket check would report "healthy" before the real server is up.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "walt", "-d", "walt"]
+      interval: 1s
+      timeout: 3s
+      retries: 60

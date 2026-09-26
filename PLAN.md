@@ -154,7 +154,8 @@ Time estimates are rough, about 1 day in total. Each slice lists **tests first**
   - `docker-compose.yml` (postgres:16) and a pytest `postgres` marker
   - A/B/C (+ the synthetic model) run on Postgres and match the expected results
   - golden SQL for Postgres
-  - dialect-specific division by zero: Postgres raises an error, and DuckDB's actual native result is pinned (verified at this point, not assumed)
+  - division by zero: pct_change with a zero base is NULL on both engines via `NULLIF` (raw engine behaviour pinned for contrast)
+  - `IdentifierTooLong` for output names over Postgres's 63 bytes
   - `UnknownDialect` with suggestions
   - the CASE-WHEN fallback, tested through a test-only dialect with `supports_aggregate_filter=False`
 - **Code:** `dialects/postgres.py`.

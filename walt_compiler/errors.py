@@ -49,3 +49,6 @@ class AmbiguousJoinPath(CompilerError): pass
 class MultipleFactTables(CompilerError): pass
 class InvalidCompare(CompilerError): pass
 class ConflictingFilter(CompilerError): pass
+
+# Names the target dialect cannot represent
+class IdentifierTooLong(CompilerError): pass
