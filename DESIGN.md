@@ -283,7 +283,9 @@ Compare is a general pivot over **any** declared dimension of **any** type.
   quoted, so any characters are legal. Name clashes are caught in §6.5.
 - **Division by zero is left to the dialect.** The compiler emits SQL and does not judge the data. Dialect-specific
   tests pin each behaviour down.
-- If a group has no rows for a period, the value is `NULL`, not 0. No data is invented.
+- If a group has no rows for a period, `sum`/`min`/`max`/`avg` give `NULL`, never a coalesced 0. No data is invented.
+  `count` and `count_distinct` give 0, because a count over zero rows is genuinely 0 (standard SQL, and the CASE-WHEN
+  fallback agrees). So the delta for "2 trips, then none" is −2.
 
 ### 6.4 Totals
 - `totals: "grand"` with `group_by = (g1…gn)` becomes `GROUP BY GROUPING SETS ((g1, …, gn), ())`.

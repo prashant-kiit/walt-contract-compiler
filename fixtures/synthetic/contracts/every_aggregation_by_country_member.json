@@ -1,0 +1,9 @@
+{
+  "metrics": [
+    { "name": "fare_total" }, { "name": "trip_count" }, { "name": "paid_trips" },
+    { "name": "unique_riders" }, { "name": "shortest_km" }, { "name": "longest_km" },
+    { "name": "avg_fare" }
+  ],
+  "group_by": ["maker_country", "member"],
+  "totals": "grand"
+}

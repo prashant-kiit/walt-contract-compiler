@@ -1,0 +1,11 @@
+{
+  "metrics": [{ "name": "unique_riders" }, { "name": "avg_fare" }],
+  "group_by": ["electric"],
+  "compare": {
+    "dimension": "trip_date",
+    "periods": ["2026-01-05", "2026-01-06"],
+    "primary": "2026-01-06",
+    "outputs": ["values", "delta", "pct_change"]
+  },
+  "totals": "grand"
+}

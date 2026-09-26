@@ -1,0 +1,57 @@
+{
+  "datasets": [
+    { "name": "trips", "grain": "one ride" },
+    { "name": "cycles", "grain": "one bike" },
+    { "name": "cycle_models", "grain": "one bike model" },
+    { "name": "makers", "grain": "one manufacturer" },
+    { "name": "maker_hq", "grain": "one manufacturer headquarters" },
+    { "name": "docks", "grain": "one dock" },
+    { "name": "dock_audits", "grain": "one audit of a dock" }
+  ],
+  "relationships": [
+    { "from": "trips", "from_column": "cycle_tag", "to": "cycles",
+      "to_column": "tag", "cardinality": "many_to_one" },
+    { "from": "cycles", "from_column": "model_ref", "to": "cycle_models",
+      "to_column": "model_ref", "cardinality": "many_to_one" },
+    { "from": "cycle_models", "from_column": "maker_key", "to": "makers",
+      "to_column": "maker_key", "cardinality": "many_to_one" },
+    { "from": "makers", "from_column": "maker_key", "to": "maker_hq",
+      "to_column": "maker_key", "cardinality": "one_to_one" },
+    { "from": "trips", "from_column": "dock_code", "to": "docks",
+      "to_column": "dock_code", "cardinality": "many_to_one" },
+    { "from": "docks", "from_column": "dock_code", "to": "dock_audits",
+      "to_column": "dock_code", "cardinality": "one_to_many" }
+  ],
+  "metrics": [
+    { "name": "fare_total", "agg": "sum", "expression": "fare",
+      "model": "trips", "measure_class": "additive" },
+    { "name": "trip_count", "agg": "count", "expression": "trip_id",
+      "model": "trips", "measure_class": "additive" },
+    { "name": "paid_trips", "agg": "count", "expression": "fare",
+      "model": "trips", "measure_class": "additive" },
+    { "name": "unique_riders", "agg": "count_distinct", "expression": "rider_ref",
+      "model": "trips", "measure_class": "distinct_count" },
+    { "name": "shortest_km", "agg": "min", "expression": "km",
+      "model": "trips", "measure_class": "non_additive" },
+    { "name": "longest_km", "agg": "max", "expression": "km",
+      "model": "trips", "measure_class": "non_additive" },
+    { "name": "avg_fare", "agg": "avg", "expression": "fare",
+      "model": "trips", "measure_class": "non_additive" },
+    { "name": "audit_count", "agg": "count", "expression": "audit_id",
+      "model": "dock_audits", "measure_class": "additive" }
+  ],
+  "dimensions": [
+    { "name": "trip_date", "model": "trips", "type": "date", "column": "trip_day" },
+    { "name": "start_time", "model": "trips", "type": "timestamp", "column": "started_at" },
+    { "name": "member", "model": "trips", "type": "boolean", "column": "is_member" },
+    { "name": "electric", "model": "cycles", "type": "boolean", "column": "is_electric" },
+    { "name": "frame_kg", "model": "cycles", "type": "double" },
+    { "name": "launch_year", "model": "cycle_models", "type": "integer" },
+    { "name": "list_price", "model": "cycle_models", "type": "decimal" },
+    { "name": "maker_name", "model": "makers", "type": "text", "column": "maker_label" },
+    { "name": "maker_country", "model": "makers", "type": "text", "column": "country" },
+    { "name": "hq_city", "model": "maker_hq", "type": "text" },
+    { "name": "district", "model": "docks", "type": "text" },
+    { "name": "auditor", "model": "dock_audits", "type": "text" }
+  ]
+}

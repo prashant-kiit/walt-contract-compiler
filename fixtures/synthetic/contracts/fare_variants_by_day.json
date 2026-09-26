@@ -1,0 +1,13 @@
+{
+  "metrics": [
+    { "name": "fare_total" },
+    { "name": "fare_total", "as": "electric_fare",
+      "filters": [{ "field": "electric", "op": "=", "value": true }] },
+    { "name": "fare_total", "as": "harbor_fare",
+      "filters": [{ "field": "district", "op": "=", "value": "Harbor", "model": "docks" }] },
+    { "name": "fare_total", "as": "nl_member_fare",
+      "filters": [{ "field": "maker_country", "op": "=", "value": "NL" },
+                  { "field": "member", "op": "=", "value": true }] }
+  ],
+  "group_by": ["trip_date"]
+}
