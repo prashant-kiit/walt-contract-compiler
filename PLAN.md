@@ -13,14 +13,34 @@ No new scope. The last two open questions (a dialect allow-list, and `run --dial
 
 ## Working agreement
 
+**Roles (from S9 onwards).** S0–S8 were built by a single agent. From S9, tests and code are written by **two
+separate subagents**, defined in `.claude/agents/`:
+
+| Role | Who | Writes | Never touches |
+|---|---|---|---|
+| **Orchestrator** | the main Claude session | slice briefs, DESIGN.md/PLAN.md changes (after discussion), commits and pushes | — |
+| **test-writer** ([.claude/agents/test-writer.md](.claude/agents/test-writer.md)) | subagent | `tests/`, `fixtures/` (expected results, golden SQL, seeds) | `walt_compiler/`, git |
+| **implementer** ([.claude/agents/implementer.md](.claude/agents/implementer.md)) | subagent | `walt_compiler/` | `tests/`, `fixtures/`, DESIGN.md, git |
+
+Separating the roles means the tests are written from the spec, not from the code, and the code can't pass by
+bending the tests. Neither agent commits: every commit goes through the orchestrator after Gate 2.
+
 **Every slice follows this loop:**
 
-1. **RED:** write the tests for the slice from DESIGN.md, run them, and show them failing.
-2. **🛑 Gate 1: the user reviews the tests.** Do the tests say the right thing? No code is written before approval.
-3. **GREEN:** write the minimum code that passes. Run the full suite, not just the new tests.
-4. **REFACTOR** only while tests stay green.
-5. **🛑 Gate 2: the user reviews the code, the diff and the green test output.**
-6. On approval, make **one commit (tests and code together, so every commit is green)** and `git push origin master`.
+1. **Brief:** the orchestrator writes the slice brief (scope, the DESIGN.md sections it covers, known edge cases).
+2. **RED (test-writer):** writes the tests and fixtures, runs the suite, and reports the new tests failing for the right reason.
+   - The orchestrator re-runs the suite to confirm the red, and checks the diff touches only `tests/` and `fixtures/`.
+3. **🛑 Gate 1: the user reviews the tests.** Do they say the right thing? No code is written before approval.
+   Requested changes go back to the test-writer.
+4. **GREEN + REFACTOR (implementer):** writes the minimum code that passes the full suite, refactoring only while green.
+   - If it believes a test is wrong, it stops and reports. The orchestrator brings that to the user; the implementer never edits tests.
+5. **Verify (orchestrator):**
+   - re-runs the full suite
+   - confirms the implementer's diff touches only `walt_compiler/`
+   - reviews the code against DESIGN.md
+6. **🛑 Gate 2: the user reviews the code, the diff and the green test output.**
+7. On approval, the orchestrator makes **one commit (tests and code together, so every commit is green)** and runs
+   `git push origin master`.
 
 **Rules:**
 - Commit messages use Conventional Commits (`feat(resolve): …`, `test(…)`, `chore(…)`, `docs(…)`) and end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
@@ -118,13 +138,16 @@ Time estimates are rough, about 1 day in total. Each slice lists **tests first**
   - cross-process determinism with different `PYTHONHASHSEED`
 - **Code:** `features/totals.py`, plus the ordering/output finalisation in `resolve.py`.
 
-### S10. Beyond-PDF tests by an independent agent (~1.5 h)
-- Spawn a **separate agent** (as the user requested) whose only inputs are `DESIGN.md` and the PDF. It never sees `walt_compiler/`.
-  - It writes `fixtures/synthetic/` (a model sharing no names with the PDF's, multi-hop, all types and aggregations, `column ≠ name`) with hand-computed expectations.
+### S10. Beyond-PDF tests by the test-writer in spec-only mode (~1.5 h)
+- The **test-writer** subagent runs in **spec-only mode**: its only inputs are `DESIGN.md`, `PLAN.md` and the fixture
+  data. It never opens `walt_compiler/`.
+  - It writes `fixtures/synthetic/` (a model sharing no names with the PDF's, multi-hop, all types and aggregations,
+    `column ≠ name`) with hand-computed expectations.
   - It also writes the §6.7 combination tests and edge cases.
 - **🛑 Gate 1:** the user reviews these tests.
-- Then comes the fix loop: **fix the code, never the expectations**. Any disputed expectation comes back to the user.
-- **🛑 Gate 2**, then commit and push.
+- The **implementer** subagent then fixes the code until everything is green: **fix the code, never the
+  expectations**. Any disputed expectation comes back to the user.
+- **🛑 Gate 2**, then the orchestrator commits and pushes.
 
 ### S11. Postgres dialect (~1 h)
 - **Tests:**
@@ -177,6 +200,7 @@ Cut in this order, and write each cut up in the README:
 - `walt_compiler/features/*`, `walt_compiler/dialects/*`, `walt_compiler/__main__.py`
 - `fixtures/pdf/*`, `fixtures/synthetic/*`, `tests/*`, `bench/bench.py`
 - `Makefile`, `pyproject.toml`, `docker-compose.yml`, `README.md`, `DESIGN.md`, `PLAN.md`
+- `.claude/agents/test-writer.md`, `.claude/agents/implementer.md`
 
 ## Verification (end to end)
 

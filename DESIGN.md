@@ -469,12 +469,14 @@ Example: `UnknownMetric at /metrics/0/name: 'total_revenu' is not a metric. Did 
 
 ## 13. Test-writing process
 
-- The tests that go beyond the PDF (synthetic model, feature combinations, edge cases) are written by a **separate
-  agent**.
-  - It works only from this DESIGN.md and the PDF, **never from the implementation**.
-  - It computes every expected value by hand from the fixture data.
-- It then runs the tests and fixes things in a loop until everything passes. The rule for that loop: **fix the code, never the
-  expectations.**
+- From S9 onwards, every slice's tests and code are written by **two separate subagents** (see PLAN.md, "Working
+  agreement", and `.claude/agents/`):
+  - The **test-writer** writes only `tests/` and `fixtures/`. It works from this DESIGN.md and PLAN.md, reading the
+    implementation only for public names, and computes every expected value by hand from the fixture data.
+  - The **implementer** writes only `walt_compiler/`, and never edits a test or expectation.
+- The tests that go beyond the PDF (S10: synthetic model, feature combinations, edge cases) are written by the
+  test-writer in **spec-only mode**: it never opens the implementation at all.
+- The fix loop's rule: **fix the code, never the expectations.**
   - Changing any expected value, or deleting a test, needs the author's explicit approval, with the reason written down.
   - This stops the loop from "passing" by weakening the tests.
 - If a test shows this design is ambiguous or wrong, the design is corrected here first. Code and tests then follow
