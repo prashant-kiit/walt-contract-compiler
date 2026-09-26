@@ -7,6 +7,7 @@ the base through the join planner. Features expand into plain IR building blocks
 from walt_compiler.contract import Contract, FilterSpec, MetricRequest
 from walt_compiler.errors import (DuplicateOutputName, ModelMismatch, MultipleFactTables, UnknownDimension,
                                   UnknownMetric, UnsupportedFeature, UnsupportedOperator)
+from walt_compiler.features import compare as compare_feature
 from walt_compiler.features import metric_filters
 from walt_compiler.joins import plan_joins
 from walt_compiler.model import Catalog, Dimension, Metric
@@ -125,7 +126,7 @@ def resolve(contract: Contract, catalog: Catalog, options: CompileOptions = Comp
     b.where.extend(b.predicate(f) for f in contract.filters)
 
     if contract.compare is not None:
-        raise UnsupportedFeature("compare is not implemented yet.", path=contract.compare.path)
+        compare_feature.apply(b, contract)
     if contract.totals is not None:
         raise UnsupportedFeature("totals is not implemented yet.", path="/totals")
 
