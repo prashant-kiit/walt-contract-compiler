@@ -93,7 +93,8 @@ class GroupingSets:
 
 @dataclass(frozen=True)
 class OrderItem:
-    expr: Expr              # ascending, NULLS LAST
+    expr: Expr              # ascending
+    nulls_last: bool = True
 
 
 @dataclass(frozen=True)

@@ -306,7 +306,8 @@ Compare is a general pivot over **any** declared dimension of **any** type.
 - All output names must be unique, including generated compare names and `is_total`. A clash raises
   `DuplicateOutputName`.
 - `ORDER BY is_total ASC, g1 ASC NULLS LAST, …, gn ASC NULLS LAST` is emitted whenever `group_by` is non-empty.
-  - `NULLS LAST` is always spelled out explicitly.
+  - `NULLS LAST` is always spelled out explicitly on group keys, so the order never depends on a database's
+    default for where NULLs sort. `is_total` never gets it: it is never NULL (it comes from `GROUPING() = 1`).
   - Without group_by the result is one row, so there is nothing to order.
 
 ### 6.6 Query shape

@@ -106,7 +106,7 @@ class OutputColumn:
 
 @dataclass(frozen=True)
 class OrderKey:
-    output: str             # ascending, NULLS LAST
+    output: str             # ascending; NULLS LAST unless the output can never be NULL (is_total)
 
 
 @dataclass(frozen=True)

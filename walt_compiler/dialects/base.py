@@ -151,4 +151,4 @@ class Dialect:
         return f"GROUPING SETS ({sets})"
 
     def _render_order(self, item: OrderItem) -> str:
-        return f"{self.render(item.expr)} ASC NULLS LAST"
+        return f"{self.render(item.expr)} ASC{' NULLS LAST' if item.nulls_last else ''}"
