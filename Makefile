@@ -1,11 +1,15 @@
 PY := .venv/bin/python
 
-.PHONY: setup test test-pg pg-down
+.PHONY: setup run test test-pg pg-down
 
 setup:
 	python3 -m venv .venv
 	$(PY) -m pip install -q --upgrade pip
 	$(PY) -m pip install -q -e ".[dev]"
+
+# Demo: compile Contract A for DuckDB, run it on the PDF seed and print the table.
+run:
+	$(PY) -m walt_compiler run --model fixtures/pdf/semantic_model.json --contract fixtures/pdf/contracts/a.json
 
 test:
 	$(PY) -m pytest -q
