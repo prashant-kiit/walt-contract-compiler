@@ -1,6 +1,6 @@
 PY := .venv/bin/python
 
-.PHONY: setup run test test-pg pg-down bench
+.PHONY: setup run sql test test-pg pg-down bench
 
 setup:
 	python3 -m venv .venv
@@ -10,6 +10,11 @@ setup:
 # Demo: compile Contract A for DuckDB, run it on the PDF seed and print the table.
 run:
 	$(PY) -m walt_compiler run --model fixtures/pdf/semantic_model.json --contract fixtures/pdf/contracts/a.json
+
+# Print the SQL for a PDF contract: make sql [CONTRACT=a|b|c] [DIALECT=duckdb|postgres]
+sql:
+	$(PY) -m walt_compiler compile --model fixtures/pdf/semantic_model.json \
+	  --contract fixtures/pdf/contracts/$(or $(CONTRACT),a).json --dialect $(or $(DIALECT),duckdb)
 
 test:
 	$(PY) -m pytest -q

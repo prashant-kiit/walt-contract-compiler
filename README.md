@@ -11,6 +11,7 @@ Requires Python ≥ 3.11. Docker is only needed for the Postgres tests.
 ```sh
 make setup      # venv + dev dependencies (duckdb, psycopg, pytest)
 make run        # Contract A, compiled for DuckDB, run on the PDF data
+make sql        # print Contract A's SQL; e.g. make sql CONTRACT=b DIALECT=postgres
 make test       # the whole suite on DuckDB (629 tests)
 make test-pg    # starts Postgres 16 in Docker and runs the same contracts there (75 tests)
 make bench      # p50 / p95 / max over 10,000 compiles per contract and dialect
