@@ -1,6 +1,6 @@
 PY := .venv/bin/python
 
-.PHONY: setup run test test-pg pg-down
+.PHONY: setup run test test-pg pg-down bench
 
 setup:
 	python3 -m venv .venv
@@ -13,6 +13,10 @@ run:
 
 test:
 	$(PY) -m pytest -q
+
+# p50/p95/max over 10k compiles per contract x dialect, plus machine specs (numbers go in the README).
+bench:
+	$(PY) -m bench.bench
 
 # Starts Postgres 16 (docker-compose.yml), waits for its healthcheck, runs the postgres-marked tests.
 # The container is left running; `make pg-down` stops it.
