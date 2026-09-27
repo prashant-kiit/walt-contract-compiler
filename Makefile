@@ -13,7 +13,7 @@ run:
 
 # Print the SQL for a PDF contract: make sql [CONTRACT=a|b|c] [DIALECT=duckdb|postgres]
 sql:
-	$(PY) -m walt_compiler compile --model fixtures/pdf/semantic_model.json \
+	@$(PY) -m walt_compiler compile --model fixtures/pdf/semantic_model.json \
 	  --contract fixtures/pdf/contracts/$(or $(CONTRACT),a).json --dialect $(or $(DIALECT),duckdb)
 
 test:
